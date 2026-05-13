@@ -1,0 +1,1440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nodewave | Designing the Logic Behind the Luxury</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Outfit:wght@200;300;400;600;800&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/studio-freight/lenis@1.0.19/bundled/lenis.min.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --amber: #e86100;
+      --amber-warm: #f07014;
+      --amber-dim: rgba(232,97,0,0.12);
+      --amber-glow: rgba(232,97,0,0.35);
+      --rose: #f26600;
+      --ink: #1a0800;
+      --ink2: #3d1e00;
+      --ink3: #7a4520;
+      --muted: #b07050;
+      --bg: #fdfaf7;
+      --surface: rgba(255,255,255,0.72);
+      --border: rgba(232,97,0,0.12);
+      --glass: rgba(255,255,255,0.6);
+      --glass-border: rgba(255,255,255,0.9);
+    }
+
+    html { scroll-behavior: smooth; }
+    html.lenis { height: auto; }
+    .lenis.lenis-smooth { scroll-behavior: auto; }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      overflow-x: hidden;
+    }
+
+    /* Subtle warm grain */
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 9999; opacity: 0.4;
+    }
+
+    ::selection { background: var(--amber); color: #fff; }
+    ::-webkit-scrollbar { display: none; }
+
+    /* ─── CURSOR ─── */
+    .cursor-dot {
+      width: 6px; height: 6px;
+      background: var(--amber); border-radius: 50%;
+      position: fixed; pointer-events: none; z-index: 99999;
+      transform: translate(-50%,-50%);
+      transition: width 0.2s, height 0.2s;
+    }
+    .cursor-ring {
+      width: 28px; height: 28px;
+      border: 1.5px solid var(--amber-glow); border-radius: 50%;
+      position: fixed; pointer-events: none; z-index: 99998;
+      transform: translate(-50%,-50%);
+      transition: width 0.35s cubic-bezier(.17,.67,.35,1.2), height 0.35s cubic-bezier(.17,.67,.35,1.2), border-color 0.3s;
+    }
+    body:has(a:hover) .cursor-ring, body:has(button:hover) .cursor-ring { width: 52px; height: 52px; border-color: var(--amber); }
+    body:has(a:hover) .cursor-dot { width: 9px; height: 9px; }
+
+    /* ─── PAGE LOADER ─── */
+    #page-loader {
+      position: fixed; inset: 0; background: #fff;
+      z-index: 99997; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 1.5rem;
+    }
+    .loader-mark {
+      font-family: 'Outfit', sans-serif; font-weight: 800;
+      font-size: 2rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--ink);
+      opacity: 0; animation: fadeUp 0.6s 0.3s forwards;
+    }
+    .loader-mark span { color: var(--amber); }
+    .loader-bar-wrap { width: 200px; height: 1px; background: var(--border); position: relative; overflow: hidden; opacity: 0; animation: fadeUp 0.4s 0.5s forwards; }
+    .loader-bar-fill { position: absolute; left: 0; top: 0; height: 100%; width: 0; background: var(--amber); transition: width 0.1s linear; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+    /* ─── NAV ─── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 900;
+      background: rgba(253,250,247,0.7);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--glass-border);
+      transition: box-shadow 0.3s, border-color 0.3s;
+    }
+    nav.scrolled {
+      box-shadow: 0 4px 30px rgba(232,97,0,0.07);
+      border-bottom-color: var(--border);
+    }
+    .nav-inner {
+      display: grid; grid-template-columns: 1fr auto 1fr;
+      align-items: center; height: 64px; padding: 0 3rem; max-width: 1400px; margin: 0 auto;
+    }
+    .nav-links { display: flex; gap: 2.2rem; align-items: center; }
+    .nav-links a {
+      font-family: 'JetBrains Mono', monospace; font-size: 0.66rem;
+      font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--ink3); text-decoration: none; transition: color 0.25s;
+    }
+    .nav-links a:hover { color: var(--amber); }
+    .nav-wordmark {
+      font-family: 'Outfit', sans-serif; font-weight: 800;
+      font-size: 1rem; letter-spacing: 0.2em; text-transform: uppercase;
+      color: var(--ink); text-decoration: none; display: flex; align-items: center; gap: 0.7rem;
+    }
+    .nav-dot {
+      width: 7px; height: 7px; border-radius: 50%; background: var(--amber);
+      box-shadow: 0 0 10px var(--amber);
+      animation: breathe 3s ease-in-out infinite;
+    }
+    @keyframes breathe {
+      0%,100% { box-shadow: 0 0 6px var(--amber); opacity: 0.6; }
+      50% { box-shadow: 0 0 18px var(--amber), 0 0 32px var(--amber-dim); opacity: 1; }
+    }
+    .nav-right { display: flex; justify-content: flex-end; align-items: center; gap: 1rem; }
+    .nav-login {
+      font-family: 'JetBrains Mono', monospace; font-size: 0.66rem; font-weight: 500;
+      letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink2);
+      text-decoration: none; transition: color 0.25s;
+    }
+    .nav-login:hover { color: var(--amber); }
+    .nav-cta {
+      font-family: 'JetBrains Mono', monospace; font-size: 0.66rem; font-weight: 500;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: #fff; background: var(--ink); text-decoration: none;
+      padding: 0.65rem 1.4rem; border-radius: 100px;
+      transition: all 0.3s; border: 1px solid transparent;
+    }
+    .nav-cta:hover { background: var(--amber); transform: translateY(-1px); box-shadow: 0 6px 20px var(--amber-dim); }
+
+    /* ─── HERO ─── */
+    #hero {
+      min-height: 100vh; padding-top: 64px;
+      display: flex; flex-direction: column; align-items: center;
+      position: relative; overflow: hidden;
+    }
+    .hero-sky {
+      position: absolute; inset: 0; z-index: 0;
+      background: linear-gradient(170deg, #e8f4ff 0%, #f5eee8 40%, #fdfaf7 70%);
+    }
+    /* Soft blobs */
+    .hero-sky::before {
+      content: ''; position: absolute;
+      top: -10%; right: -5%; width: 55vw; height: 55vw;
+      background: radial-gradient(circle, rgba(232,97,0,0.10) 0%, transparent 65%);
+      border-radius: 50%; filter: blur(60px);
+      animation: blobDrift 18s ease-in-out infinite alternate;
+    }
+    .hero-sky::after {
+      content: ''; position: absolute;
+      bottom: 5%; left: -8%; width: 45vw; height: 45vw;
+      background: radial-gradient(circle, rgba(100,180,255,0.12) 0%, transparent 65%);
+      border-radius: 50%; filter: blur(80px);
+      animation: blobDrift 24s ease-in-out infinite alternate-reverse;
+    }
+    @keyframes blobDrift {
+      0% { transform: translate(0,0) scale(1); }
+      100% { transform: translate(4%,6%) scale(1.08); }
+    }
+
+    .hero-content {
+      position: relative; z-index: 2;
+      max-width: 860px; width: 100%; margin: 0 auto;
+      padding: 7rem 2rem 5rem; text-align: center;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      background: rgba(255,255,255,0.7); border: 1px solid rgba(232,97,0,0.25);
+      border-radius: 100px; padding: 0.4rem 1rem;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.62rem;
+      letter-spacing: 0.1em; text-transform: uppercase; color: var(--amber);
+      margin-bottom: 2.5rem;
+      backdrop-filter: blur(8px);
+      opacity: 0; transform: translateY(10px);
+      animation: heroIn 0.6s 1.8s forwards;
+    }
+    .hero-badge-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--amber); animation: breathe 2s infinite; }
+    .hero-h1 {
+      font-family: 'Outfit', sans-serif; font-weight: 800;
+      font-size: clamp(2.8rem, 7vw, 5.5rem);
+      line-height: 1.0; letter-spacing: -0.03em; color: var(--ink);
+      margin-bottom: 1.8rem;
+      opacity: 0; transform: translateY(18px);
+      animation: heroIn 0.7s 2.0s forwards;
+    }
+    .hero-h1 em { font-style: normal; color: var(--amber); }
+    .hero-sub {
+      font-size: clamp(1rem, 2vw, 1.15rem); color: var(--ink3);
+      line-height: 1.7; max-width: 520px; margin: 0 auto 2.5rem;
+      opacity: 0; transform: translateY(14px);
+      animation: heroIn 0.7s 2.2s forwards;
+    }
+    .hero-ctas {
+      display: flex; align-items: center; justify-content: center; gap: 1.2rem;
+      flex-wrap: wrap;
+      opacity: 0; transform: translateY(10px);
+      animation: heroIn 0.6s 2.35s forwards;
+    }
+    .btn-primary {
+      font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 600;
+      font-size: 0.95rem; color: #fff;
+      background: var(--ink); padding: 0.85rem 2.2rem; border-radius: 100px;
+      text-decoration: none; border: none; cursor: pointer;
+      transition: all 0.3s; display: inline-flex; align-items: center; gap: 0.5rem;
+    }
+    .btn-primary:hover { background: var(--amber); transform: translateY(-2px); box-shadow: 0 10px 30px var(--amber-glow); }
+    .btn-ghost {
+      font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 500;
+      font-size: 0.9rem; color: var(--ink2);
+      background: transparent; padding: 0.85rem 0;
+      text-decoration: none; border: none; cursor: pointer;
+      transition: color 0.25s; display: inline-flex; align-items: center; gap: 0.4rem;
+    }
+    .btn-ghost:hover { color: var(--amber); }
+    .hero-social-proof {
+      margin-top: 1.5rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+      font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.82rem; color: var(--muted);
+      opacity: 0; animation: heroIn 0.6s 2.5s forwards;
+    }
+    .hero-social-proof .live-dot {
+      width: 6px; height: 6px; border-radius: 50%; background: #22c55e;
+      box-shadow: 0 0 8px rgba(34,197,94,0.5); flex-shrink: 0;
+      animation: breathe 2s infinite;
+    }
+    @keyframes heroIn { to { opacity: 1; transform: none; } }
+
+    /* Floating UI cards */
+    .hero-float-left, .hero-float-right {
+      position: absolute; top: 50%; z-index: 3;
+      opacity: 0; animation: heroIn 0.8s 2.6s forwards;
+    }
+    .hero-float-left { left: 2%; transform: translateY(-30%) rotate(-4deg); }
+    .hero-float-right { right: 2%; transform: translateY(-60%) rotate(4deg); }
+
+    .float-card {
+      background: rgba(255,255,255,0.82); backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.95);
+      border-radius: 16px; padding: 1.2rem 1.5rem;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+      min-width: 200px;
+      animation: cardFloat 6s ease-in-out infinite alternate;
+    }
+    .hero-float-right .float-card { animation-delay: -3s; }
+    @keyframes cardFloat {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(-12px); }
+    }
+    .float-card-label {
+      font-family: 'JetBrains Mono', monospace; font-size: 0.58rem;
+      letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted);
+      margin-bottom: 0.6rem;
+    }
+    .float-card-value {
+      font-family: 'Outfit', sans-serif; font-weight: 700;
+      font-size: 1.6rem; color: var(--ink); line-height: 1;
+    }
+    .float-card-value span { color: var(--amber); }
+    .float-card-sub { font-size: 0.75rem; color: var(--ink3); margin-top: 0.4rem; }
+    .float-card-bar { height: 3px; background: var(--border); border-radius: 2px; margin-top: 1rem; overflow: hidden; }
+    .float-card-fill { height: 100%; background: var(--amber); border-radius: 2px; }
+    .float-card-tag {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      background: rgba(34,197,94,0.1); color: #16a34a;
+      font-size: 0.65rem; font-weight: 600; padding: 0.2rem 0.5rem;
+      border-radius: 100px; margin-top: 0.8rem;
+      font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em;
+    }
+    .float-card-tag .dot { width: 4px; height: 4px; border-radius: 50%; background: #22c55e; }
+    .float-row { display: flex; align-items: center; gap: 0.7rem; margin-top: 0.7rem; }
+    .float-row-icon {
+      width: 30px; height: 30px; border-radius: 8px;
+      background: var(--amber-dim); display: flex; align-items: center; justify-content: center;
+      font-size: 0.8rem; flex-shrink: 0;
+    }
+    .float-row-text { font-size: 0.72rem; color: var(--ink2); }
+    .float-row-text strong { font-weight: 600; color: var(--ink); display: block; font-size: 0.75rem; }
+    .float-status {
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      font-size: 0.58rem; letter-spacing: 0.08em; font-weight: 600;
+      padding: 0.15rem 0.45rem; border-radius: 100px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .float-status.done { background: rgba(34,197,94,0.1); color: #16a34a; }
+    .float-status.run { background: rgba(232,97,0,0.1); color: var(--amber); }
+
+    /* Hero scroll indicator */
+    .hero-scroll { position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%); z-index: 3; }
+    .hero-scroll-line { width: 1px; height: 50px; background: linear-gradient(to bottom, transparent, var(--amber)); margin: 0 auto; animation: lineGrow 2s ease-in-out infinite; }
+    @keyframes lineGrow { 0%,100%{transform:scaleY(0.3);opacity:0.3} 50%{transform:scaleY(1);opacity:1} }
+
+    /* ─── MARQUEE ─── */
+    .marquee-section {
+      border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.5); overflow: hidden;
+      padding: 1.1rem 0;
+    }
+    .marquee-label {
+      font-family: 'JetBrains Mono', monospace; font-size: 0.6rem;
+      letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted);
+      text-align: center; padding-bottom: 0.8rem;
+    }
+    .marquee-track {
+      display: flex; gap: 0; overflow: hidden; position: relative;
+    }
+    .marquee-inner {
+      display: flex; gap: 0; min-width: max-content;
+      animation: marqueeScroll 28s linear infinite;
+    }
+    .marquee-inner:nth-child(2) { animation-delay: -14s; }
+    @keyframes marqueeScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+    .marquee-item {
+      display: flex; align-items: center; gap: 0.7rem;
+      padding: 0 2.5rem; border-right: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .marquee-avatar {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: var(--amber-dim); display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem; font-weight: 700; color: var(--amber);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .marquee-name { font-size: 0.82rem; font-weight: 600; color: var(--ink2); }
+    .marquee-check { color: var(--amber); font-size: 0.75rem; }
+
+    /* ─── SECTION SHARED ─── */
+    .section-badge {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      background: rgba(255,255,255,0.7); border: 1px solid rgba(232,97,0,0.2);
+      border-radius: 100px; padding: 0.35rem 0.9rem;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.6rem;
+      letter-spacing: 0.12em; text-transform: uppercase; color: var(--amber);
+      backdrop-filter: blur(8px); margin-bottom: 1.5rem;
+    }
+
+    /* ─── CORE INTELLIGENCE SECTION ─── */
+    #core {
+      padding: 7rem 2rem; max-width: 1200px; margin: 0 auto; text-align: center;
+    }
+    .core-h2 {
+      font-family: 'Outfit', sans-serif; font-weight: 800;
+      font-size: clamp(2.5rem, 6vw, 5rem);
+      line-height: 1.0; letter-spacing: -0.03em; color: var(--ink);
+      margin-bottom: 1rem;
+    }
+    .core-h2 .muted-word { color: #c4a898; }
+    .core-h2 .accent-word { color: var(--amber); }
+    .core-sub {
+      font-size: 1.05rem; color: var(--ink3); max-width: 480px; margin: 0 auto 4rem;
+    }
+
+    .core-cards {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;
+      text-align: left;
+    }
+    .core-card {
+      background: rgba(255,255,255,0.8); border: 1px solid var(--glass-border);
+      border-radius: 20px; padding: 2rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+      transition: transform 0.3s, box-shadow 0.3s;
+      position: relative; overflow: hidden;
+    }
+    .core-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--amber), transparent);
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .core-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(232,97,0,0.1); }
+    .core-card:hover::before { opacity: 1; }
+    .core-card-icon {
+      width: 44px; height: 44px; border-radius: 12px;
+      background: var(--amber-dim); display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem; margin-bottom: 1.2rem;
+    }
+    .core-card h3 {
+      font-family: 'Outfit', sans-serif; font-weight: 700;
+      font-size: 1.1rem; color: var(--ink); margin-bottom: 0.6rem;
+    }
+    .core-card p { font-size: 0.875rem; color: var(--ink3); line-height: 1.7; }
+
+    /* Sample UI in core card */
+    .mini-chat {
+      margin-top: 1.5rem; background: #f7f3ef; border-radius: 10px; padding: 0.8rem; font-size: 0.72rem;
+    }
+    .mini-chat-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; align-items: flex-start; }
+    .mini-chat-row:last-child { margin-bottom: 0; }
+    .mini-bubble {
+      border-radius: 8px; padding: 0.35rem 0.6rem; max-width: 85%; line-height: 1.4;
+      color: var(--ink2);
+    }
+    .mini-bubble.user { background: var(--ink); color: #fff; margin-left: auto; }
+    .mini-bubble.ai { background: #fff; border: 1px solid var(--border); }
+    .mini-tag { display: inline-flex; align-items: center; gap: 0.25rem; }
+    .mini-tag .done-dot { width: 5px; height: 5px; border-radius: 50%; background: #22c55e; }
+
+    .mini-pipeline { margin-top: 1.2rem; }
+    .pipeline-step {
+      display: flex; align-items: center; gap: 0.7rem;
+      padding: 0.5rem 0; border-bottom: 1px solid var(--border); font-size: 0.72rem; color: var(--ink2);
+    }
+    .pipeline-step:last-child { border-bottom: none; }
+    .pipeline-icon { font-size: 0.8rem; flex-shrink: 0; width: 20px; text-align: center; }
+    .pipeline-label { flex: 1; }
+    .pipeline-status {
+      font-size: 0.6rem; font-family: 'JetBrains Mono', monospace;
+      padding: 0.15rem 0.4rem; border-radius: 100px; font-weight: 600;
+    }
+    .pipeline-status.active { background: rgba(232,97,0,0.12); color: var(--amber); }
+    .pipeline-status.done { background: rgba(34,197,94,0.12); color: #16a34a; }
+    .pipeline-status.queued { background: rgba(0,0,0,0.06); color: var(--muted); }
+
+    .mini-calendar { margin-top: 1.2rem; background: #f7f3ef; border-radius: 10px; overflow: hidden; }
+    .cal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.6rem 0.8rem; background: var(--ink); color: #fff;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; letter-spacing: 0.1em;
+    }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; padding: 0.6rem; }
+    .cal-cell {
+      aspect-ratio: 1; border-radius: 4px; display: flex; align-items: center; justify-content: center;
+      font-size: 0.6rem; color: var(--ink3);
+    }
+    .cal-cell.has-event { background: var(--amber-dim); color: var(--amber); font-weight: 700; }
+    .cal-cell.today { background: var(--ink); color: #fff; font-weight: 700; }
+
+    /* ─── COMPARISON TABLE ─── */
+    #compare {
+      background: linear-gradient(to bottom, var(--bg) 0%, #f5eee8 100%);
+      padding: 6rem 2rem; text-align: center; position: relative; overflow: hidden;
+    }
+    #compare::before {
+      content: 'processed\Aso far'; white-space: pre;
+      position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+      font-family: 'Outfit', sans-serif; font-weight: 800; font-size: clamp(4rem, 12vw, 10rem);
+      line-height: 1; letter-spacing: -0.04em;
+      color: transparent; -webkit-text-stroke: 1px rgba(232,97,0,0.08);
+      pointer-events: none; z-index: 0; white-space: normal;
+    }
+    .compare-inner { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; }
+    .compare-heading {
+      font-family: 'Outfit', sans-serif; font-weight: 800;
+      font-size: clamp(2rem, 5vw, 3.8rem); line-height: 1.0;
+      color: var(--ink); letter-spacing: -0.03em; margin-bottom: 3.5rem;
+    }
+    .compare-heading span { color: var(--amber); }
+
+    .compare-table {
+      background: rgba(255,255,255,0.9); backdrop-filter: blur(12px);
+      border: 1px solid var(--glass-border); border-radius: 24px; overflow: hidden;
+      box-shadow: 0 4px 40px rgba(0,0,0,0.06);
+    }
+    .compare-header {
+      display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr;
+      padding: 1rem 2rem; background: rgba(250,246,240,0.6);
+      border-bottom: 1px solid var(--border);
+      font-family: 'JetBrains Mono', monospace; font-size: 0.65rem;
+      letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
+    }
+    .compare-header div:not(:first-child) { text-align: center; }
+    .compare-row {
+      display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr;
+      padding: 1.4rem 2rem; border-bottom: 1px solid var(--border);
+      align-items: center; transition: background 0.2s;
+    }
+    .compare-row:last-child { border-bottom: none; }
+    .compare-row:hover { background: rgba(232,97,0,0.02); }
+    .compare-row.highlight { background: rgba(232,97,0,0.04); }
+    .compare-metric { font-weight: 600; font-size: 0.9rem; color: var(--ink2); }
+    .compare-val {
+      text-align: center; font-family: 'Outfit', sans-serif;
+      font-weight: 600; font-size: 1rem; color: var(--ink3);
+    }
+    .compare-val.better { color: var(--ink); font-weight: 700; }
+    .compare-impact {
+      text-align: center; display: flex; align-items: center; justify-content: center;
+    }
+    .impact-pill {
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      padding: 0.3rem 0.8rem; border-radius: 100px;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.6rem;
+      font-weight: 600; letter-spacing: 0.08em;
+    }
+    .impact-pill.same { background: rgba(0,0,0,0.05); color: var(--muted); }
+    .impact-pill.good { background: rgba(34,197,94,0.1); color: #16a34a; }
+    .impact-pill.core { background: var(--amber); color: #fff; }
+
+    /* ─── SCALE CTA ─── */
+    #scale {
+      padding: 0 2rem 6rem; position: relative;
+    }
+    .scale-card {
+      max-width: 1200px; margin: 0 auto;
+      background: linear-gradient(135deg, #e8f4ff 0%, #fef3ec 100%);
+      border: 1px solid var(--glass-border); border-radius: 28px;
+      padding: 5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 3rem;
+      align-items: center; position: relative; overflow: hidden;
+    }
+    .scale-card::after {
+      content: ''; position: absolute; top: -40%; right: -10%;
+      width: 60%; height: 180%; background: radial-gradient(circle, rgba(232,97,0,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .scale-left { position: relative; z-index: 1; }
+    .scale-h2 {
+      font-family: 'Outfit', sans-serif; font-weight: 800;
+      font-size: clamp(2rem, 4vw, 3.2rem); line-height: 1.05;
+      letter-spacing: -0.03em; color: var(--ink); margin-bottom: 1rem;
+    }
+    .scale-sub { font-size: 1rem; color: var(--ink3); line-height: 1.7; margin-bottom: 2rem; }
+    .scale-right {
+      position: relative; z-index: 1;
+      display: flex; flex-direction: column; gap: 1rem; align-items: flex-end;
+    }
+    .scale-floating-card {
+      background: rgba(255,255,255,0.9); border: 1px solid var(--glass-border);
+      border-radius: 16px; padding: 1rem 1.4rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+      width: 100%; max-width: 340px;
+      animation: cardFloat 5s ease-in-out infinite alternate;
+    }
+    .scale-floating-card:nth-child(2) { animation-delay: -2.5s; max-width: 300px; }
+    .sfc-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; }
+    .sfc-title { font-size: 0.8rem; font-weight: 600; color: var(--ink2); }
+    .sfc-badge {
+      font-size: 0.58rem; font-family: 'JetBrains Mono', monospace; font-weight: 600;
+      padding: 0.15rem 0.4rem; border-radius: 100px; letter-spacing: 0.06em;
+    }
+    .sfc-badge.running { background: rgba(232,97,0,0.1); color: var(--amber); }
+    .sfc-badge.done { background: rgba(34,197,94,0.1); color: #16a34a; }
+    .sfc-bar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; margin-top: 0.8rem; }
+    .sfc-bar-fill { height: 100%; border-radius: 2px; background: var(--amber); transition: width 2s ease; }
+    .sfc-list { margin-top: 0.6rem; }
+    .sfc-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.3rem 0; border-bottom: 1px solid var(--border); font-size: 0.75rem; color: var(--ink2);
+    }
+    .sfc-item:last-child { border-bottom: none; }
+    .sfc-item-val { font-weight: 700; color: var(--ink); }
+
+    /* ─── PROCESS ─── */
+    #process { padding: 7rem 2rem; background: var(--bg); }
+    .process-inner { max-width: 1100px; margin: 0 auto; }
+    .process-header { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; margin-bottom: 4rem; }
+    .process-h2 {
+      font-family: 'Outfit', sans-serif; font-weight: 800;
+      font-size: clamp(3rem, 6vw, 5rem); line-height: 0.95;
+      letter-spacing: -0.04em; color: var(--ink);
+    }
+    .process-intro { font-size: 1.05rem; color: var(--ink3); line-height: 1.7; max-width: 400px; padding-top: 1rem; }
+
+    .steps-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5px; background: var(--border); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; }
+    .step-card {
+      background: var(--bg); padding: 3rem 2.5rem;
+      transition: background 0.3s;
+      position: relative; overflow: hidden;
+    }
+    .step-card::after {
+      content: attr(data-num);
+      position: absolute; bottom: -1rem; right: 1rem;
+      font-family: 'Outfit', sans-serif; font-weight: 800;
+      font-size: 7rem; line-height: 1; color: rgba(232,97,0,0.04);
+      pointer-events: none;
+    }
+    .step-card:hover { background: rgba(255,251,248,1); }
+    .step-num-chip {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 36px; height: 36px; border-radius: 10px;
+      background: var(--amber-dim); color: var(--amber);
+      font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 0.75rem;
+      margin-bottom: 1.2rem;
+    }
+    .step-title {
+      font-family: 'Outfit', sans-serif; font-weight: 700;
+      font-size: 1.3rem; color: var(--ink); margin-bottom: 0.8rem;
+    }
+    .step-body { font-size: 0.875rem; color: var(--ink3); line-height: 1.7; }
+
+    /* ─── TESTIMONIALS ─── */
+    #testimony {
+      padding: 7rem 2rem;
+      background: linear-gradient(to bottom, #f5eee8 0%, var(--bg) 100%);
+    }
+    .testimony-inner { max-width: 1100px; margin: 0 auto; }
+    .testimony-top {
+      display: grid; grid-template-columns: 1fr 2fr; gap: 4rem; margin-bottom: 4rem; align-items: end;
+    }
+    .testimony-h2 {
+      font-family: 'Outfit', sans-serif; font-weight: 800;
+      font-size: clamp(3rem, 6vw, 5rem); line-height: 0.95;
+      letter-spacing: -0.04em; color: var(--ink);
+    }
+    .testimony-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; }
+    .t-stat { border-left: 2px solid var(--amber-dim); padding-left: 1.2rem; }
+    .t-stat-num {
+      font-family: 'Outfit', sans-serif; font-weight: 800;
+      font-size: 2.2rem; color: var(--amber); line-height: 1;
+    }
+    .t-stat-label { font-size: 0.78rem; color: var(--muted); margin-top: 0.3rem; line-height: 1.4; }
+
+    .testimony-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+    .t-card {
+      background: rgba(255,255,255,0.85); backdrop-filter: blur(12px);
+      border: 1px solid var(--glass-border); border-radius: 20px; padding: 2rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .t-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(232,97,0,0.08); }
+    .t-stars { color: var(--amber); font-size: 0.8rem; margin-bottom: 1rem; letter-spacing: 0.1em; }
+    .t-quote { font-size: 0.875rem; color: var(--ink2); line-height: 1.75; margin-bottom: 1.5rem; }
+    .t-author { display: flex; align-items: center; gap: 0.8rem; }
+    .t-avatar {
+      width: 38px; height: 38px; border-radius: 10px;
+      background: var(--amber-dim); display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.75rem; color: var(--amber);
+      font-family: 'JetBrains Mono', monospace; flex-shrink: 0;
+    }
+    .t-name { font-weight: 700; font-size: 0.85rem; color: var(--ink); }
+    .t-company { font-size: 0.75rem; color: var(--muted); margin-top: 0.15rem; }
+
+    /* ─── PRICING ─── */
+    #pricing { padding: 7rem 2rem; background: var(--bg); }
+    .pricing-inner { max-width: 1000px; margin: 0 auto; text-align: center; }
+    .pricing-h2 {
+      font-family: 'Outfit', sans-serif; font-weight: 800;
+      font-size: clamp(2.5rem, 5.5vw, 4rem); line-height: 1.0;
+      letter-spacing: -0.03em; color: var(--ink); margin-bottom: 1rem;
+    }
+    .pricing-sub { font-size: 1rem; color: var(--ink3); margin-bottom: 3.5rem; }
+
+    .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; text-align: left; }
+    .p-card {
+      background: rgba(255,255,255,0.85); border: 1px solid var(--glass-border);
+      border-radius: 20px; padding: 2.2rem 2rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+      display: flex; flex-direction: column; transition: transform 0.3s;
+    }
+    .p-card:hover { transform: translateY(-4px); }
+    .p-card.featured {
+      background: var(--ink); border-color: var(--ink);
+      box-shadow: 0 12px 40px rgba(26,8,0,0.2);
+    }
+    .p-plan {
+      font-family: 'JetBrains Mono', monospace; font-size: 0.65rem;
+      letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted);
+      margin-bottom: 1.2rem;
+    }
+    .p-card.featured .p-plan { color: rgba(255,255,255,0.5); }
+    .p-amount {
+      font-family: 'Outfit', sans-serif; font-weight: 800;
+      font-size: 2.4rem; color: var(--ink); line-height: 1; margin-bottom: 0.3rem;
+    }
+    .p-card.featured .p-amount { color: #fff; }
+    .p-period { font-size: 0.78rem; color: var(--muted); margin-bottom: 2rem; }
+    .p-card.featured .p-period { color: rgba(255,255,255,0.4); }
+    .p-divider { height: 1px; background: var(--border); margin-bottom: 1.5rem; }
+    .p-card.featured .p-divider { background: rgba(255,255,255,0.1); }
+    .p-feature {
+      display: flex; align-items: flex-start; gap: 0.7rem; padding: 0.5rem 0;
+      font-size: 0.85rem; color: var(--ink2);
+    }
+    .p-card.featured .p-feature { color: rgba(255,255,255,0.75); }
+    .p-check { color: var(--amber); font-size: 0.75rem; flex-shrink: 0; margin-top: 0.1rem; }
+    .p-card.featured .p-check { color: var(--amber-warm); }
+    .p-cta {
+      margin-top: auto; padding-top: 2rem;
+    }
+    .p-btn {
+      display: block; width: 100%; text-align: center;
+      font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 600; font-size: 0.9rem;
+      padding: 0.85rem; border-radius: 100px; text-decoration: none; transition: all 0.3s;
+      border: 1px solid var(--border); color: var(--ink); background: transparent;
+    }
+    .p-btn:hover { background: var(--amber); color: #fff; border-color: var(--amber); }
+    .p-card.featured .p-btn { background: var(--amber); color: #fff; border-color: var(--amber); }
+    .p-card.featured .p-btn:hover { background: var(--amber-warm); box-shadow: 0 6px 20px var(--amber-glow); }
+
+    /* ─── CONTACT ─── */
+    #contact { padding: 0 2rem 7rem; }
+    .contact-inner { max-width: 1100px; margin: 0 auto; }
+    .contact-card {
+      background: var(--ink); border-radius: 28px; overflow: hidden;
+      display: grid; grid-template-columns: 1fr 1fr;
+    }
+    .contact-left { padding: 5rem; position: relative; }
+    .contact-left::after {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(circle at 30% 60%, rgba(232,97,0,0.15), transparent 60%);
+      pointer-events: none;
+    }
+    .contact-badge {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 100px; padding: 0.3rem 0.8rem;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.58rem;
+      letter-spacing: 0.12em; text-transform: uppercase; color: var(--amber);
+      margin-bottom: 2rem;
+    }
+    .contact-h2 {
+      font-family: 'Outfit', sans-serif; font-weight: 800;
+      font-size: clamp(2.5rem, 5vw, 4.2rem); line-height: 1.0;
+      letter-spacing: -0.03em; color: #fff; margin-bottom: 1.5rem;
+    }
+    .contact-body { font-size: 1rem; color: rgba(255,255,255,0.55); line-height: 1.75; margin-bottom: 2.5rem; }
+    .contact-email {
+      font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1rem; font-weight: 600;
+      color: rgba(255,255,255,0.7); text-decoration: none;
+      border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 4px;
+      transition: color 0.25s, border-color 0.25s;
+    }
+    .contact-email:hover { color: var(--amber); border-color: var(--amber-glow); }
+    .contact-right { padding: 3rem; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.03); border-left: 1px solid rgba(255,255,255,0.06); }
+
+    /* Calendar card in contact */
+    .gcal-box {
+      background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 20px; padding: 2rem; width: 100%; max-width: 360px;
+    }
+    .gcal-icon-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+    .gcal-icon {
+      width: 46px; height: 46px; border-radius: 12px;
+      background: var(--amber-dim); display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem; flex-shrink: 0;
+    }
+    .gcal-title { font-weight: 700; font-size: 0.9rem; color: rgba(255,255,255,0.9); }
+    .gcal-sub { font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-top: 0.2rem; }
+    .gcal-divider { height: 1px; background: rgba(255,255,255,0.08); margin: 1.2rem 0; }
+    .gcal-desc { font-size: 0.82rem; color: rgba(255,255,255,0.5); line-height: 1.65; margin-bottom: 1.5rem; }
+    .gcal-btn-cta {
+      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+      width: 100%; padding: 0.85rem;
+      background: var(--amber); color: #fff; border-radius: 100px;
+      font-weight: 600; font-size: 0.9rem; text-decoration: none;
+      transition: all 0.3s; border: none; cursor: pointer;
+    }
+    .gcal-btn-cta:hover { background: var(--amber-warm); box-shadow: 0 6px 24px var(--amber-glow); transform: translateY(-2px); }
+    .gcal-pills { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1.2rem; }
+    .gcal-pill {
+      font-family: 'JetBrains Mono', monospace; font-size: 0.58rem;
+      letter-spacing: 0.08em; padding: 0.25rem 0.6rem;
+      border: 1px solid rgba(255,255,255,0.12); border-radius: 100px;
+      color: rgba(255,255,255,0.4);
+    }
+    .gcal-pill.active { background: var(--amber-dim); border-color: var(--amber-glow); color: var(--amber); }
+
+    /* ─── FOOTER ─── */
+    footer {
+      background: var(--ink); color: rgba(255,255,255,0.4);
+      padding: 2.5rem 3rem; display: flex; align-items: center;
+      justify-content: space-between; flex-wrap: wrap; gap: 1rem;
+    }
+    .footer-logo {
+      font-family: 'Outfit', sans-serif; font-weight: 800;
+      letter-spacing: 0.2em; text-transform: uppercase;
+      font-size: 0.85rem; color: rgba(255,255,255,0.8);
+      display: flex; align-items: center; gap: 0.6rem;
+    }
+    .footer-links { display: flex; gap: 2rem; }
+    .footer-links a {
+      font-family: 'JetBrains Mono', monospace; font-size: 0.62rem;
+      letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.35);
+      text-decoration: none; transition: color 0.25s;
+    }
+    .footer-links a:hover { color: var(--amber); }
+    .footer-copy { font-size: 0.72rem; }
+
+    /* ─── SCROLL REVEAL ─── */
+    .reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.7s ease, transform 0.7s ease; }
+    .reveal.in-view { opacity: 1; transform: none; }
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.2s; }
+    .reveal-delay-3 { transition-delay: 0.3s; }
+    .reveal-delay-4 { transition-delay: 0.4s; }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 1100px) {
+      .hero-float-left, .hero-float-right { display: none; }
+      .core-cards { grid-template-columns: 1fr 1fr; }
+      .scale-card { grid-template-columns: 1fr; padding: 3rem; }
+      .scale-right { align-items: stretch; }
+      .scale-floating-card { max-width: 100% !important; }
+      .contact-card { grid-template-columns: 1fr; }
+      .contact-right { border-left: none; border-top: 1px solid rgba(255,255,255,0.06); }
+    }
+    @media (max-width: 768px) {
+      .nav-inner { padding: 0 1.5rem; }
+      .nav-links { display: none; }
+      #hero { min-height: auto; }
+      .hero-content { padding: 5rem 1.5rem 4rem; }
+      .core-cards { grid-template-columns: 1fr; }
+      .compare-header { grid-template-columns: 1.2fr 1fr 1fr 0.8fr; padding: 0.8rem 1rem; }
+      .compare-row { grid-template-columns: 1.2fr 1fr 1fr 0.8fr; padding: 1rem; }
+      .process-header { grid-template-columns: 1fr; gap: 1.5rem; }
+      .steps-grid { grid-template-columns: 1fr; }
+      .testimony-top { grid-template-columns: 1fr; gap: 2rem; }
+      .testimony-grid { grid-template-columns: 1fr; }
+      .testimony-stats { grid-template-columns: repeat(3, 1fr); }
+      .pricing-grid { grid-template-columns: 1fr; }
+      .contact-left { padding: 3rem 2rem; }
+      footer { flex-direction: column; padding: 2rem; gap: 1.5rem; text-align: center; }
+      .footer-links { justify-content: center; }
+    }
+
+    /* ─── ANIMATIONS ─── */
+    @keyframes slideInLeft { from { opacity:0; transform:translateX(-30px); } to { opacity:1; transform:none; } }
+    @keyframes slideInRight { from { opacity:0; transform:translateX(30px); } to { opacity:1; transform:none; } }
+
+    /* Magnetic button */
+    .mag { display: inline-block; }
+
+    /* Numbers counter */
+    .count-up { display: inline-block; }
+
+    /* Active table row highlight pulse */
+    .compare-row.highlight { animation: rowPulse 3s ease-in-out infinite; }
+    @keyframes rowPulse {
+      0%,100% { background: rgba(232,97,0,0.04); }
+      50% { background: rgba(232,97,0,0.08); }
+    }
+
+    /* Progress bars animate in */
+    .sfc-bar-fill { animation: barGrow 1.5s 3s ease-out both; }
+    @keyframes barGrow { from { width: 0; } }
+  </style>
+</head>
+<body>
+
+  <!-- Cursor -->
+  <div class="cursor-dot" id="cd"></div>
+  <div class="cursor-ring" id="cr"></div>
+
+  <!-- Page Loader -->
+  <div id="page-loader">
+    <div class="loader-mark">Node<span>wave</span></div>
+    <div class="loader-bar-wrap"><div class="loader-bar-fill" id="lbf"></div></div>
+  </div>
+
+  <!-- ─── NAV ─── -->
+  <nav id="mainNav">
+    <div class="nav-inner">
+      <div class="nav-links">
+        <a href="#core">Services</a>
+        <a href="#process">Process</a>
+        <a href="#testimony">Results</a>
+        <a href="#pricing">Pricing</a>
+      </div>
+      <a href="#" class="nav-wordmark"><span class="nav-dot"></span>Nodewave</a>
+      <div class="nav-right">
+        <a href="mailto:hello@nodewave.in" class="nav-login">Email us</a>
+        <a href="#contact" class="nav-cta mag">Begin →</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ─── HERO ─── -->
+  <section id="hero">
+    <div class="hero-sky"></div>
+
+    <!-- Left float card -->
+    <div class="hero-float-left">
+      <div class="float-card">
+        <div class="float-card-label">Tickets Deflected</div>
+        <div class="float-card-value"><span class="count-up" data-target="78">0</span>%</div>
+        <div class="float-card-sub">avg. support ticket deflection rate</div>
+        <div class="float-card-bar"><div class="float-card-fill" style="width:78%"></div></div>
+        <div class="float-card-tag"><span class="dot"></span> Live System</div>
+      </div>
+    </div>
+
+    <!-- Right float card -->
+    <div class="hero-float-right">
+      <div class="float-card" style="min-width:220px;">
+        <div class="float-card-label">Latest Automation</div>
+        <div class="float-row">
+          <div class="float-row-icon">🤖</div>
+          <div class="float-row-text">
+            <strong>Lead Qualifier</strong>
+            Scoring &amp; routing DMs
+          </div>
+        </div>
+        <div class="float-row" style="margin-top:0">
+          <div class="float-row-icon">📅</div>
+          <div class="float-row-text">
+            <strong>Auto Bookings</strong>
+            Calendar filled 40h/wk
+          </div>
+        </div>
+        <div style="display:flex;gap:0.5rem;margin-top:1rem">
+          <span class="float-status done">● Done</span>
+          <span class="float-status run">◉ Running</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="hero-badge-dot"></span>
+        As featured in Forbes · The future of AI automation →
+      </div>
+      <h1 class="hero-h1">
+        We Build Systems<br>
+        <em>That Run Your Business</em><br>
+        Without You.
+      </h1>
+      <p class="hero-sub">
+        AI automation that qualifies leads, deflects 60–70% of support tickets, and books calls — so you scale revenue without scaling your team.
+      </p>
+      <div class="hero-ctas">
+        <a href="#contact" class="btn-primary mag">Book a Free Call →</a>
+        <a href="#core" class="btn-ghost">See how it works ↓</a>
+      </div>
+      <div class="hero-social-proof">
+        <span class="live-dot"></span>
+        <span><strong style="color:var(--ink);font-weight:700">12 founders</strong> booked a call this week</span>
+      </div>
+    </div>
+
+    <div class="hero-scroll"><div class="hero-scroll-line"></div></div>
+  </section>
+
+  <!-- ─── MARQUEE ─── -->
+  <div class="marquee-section">
+    <div class="marquee-label">Trusted by founders building with automation</div>
+    <div class="marquee-track">
+      <div class="marquee-inner" id="m1"></div>
+      <div class="marquee-inner" id="m2"></div>
+    </div>
+  </div>
+
+  <!-- ─── CORE INTELLIGENCE ─── -->
+  <section id="core">
+    <div style="max-width:1200px;margin:0 auto;padding:7rem 2rem;">
+      <div style="text-align:center;margin-bottom:4.5rem;">
+        <div class="section-badge reveal">⚡ Core Intelligence</div>
+        <h2 class="core-h2 reveal reveal-delay-1">
+          AI that works<br>
+          <span class="muted-word">exactly</span> like <span class="accent-word">you.</span>
+        </h2>
+        <p class="core-sub reveal reveal-delay-2">
+          We install the systems once. Your business runs itself — qualifying, nurturing, and booking without lifting a finger.
+        </p>
+      </div>
+
+      <div class="core-cards">
+        <!-- Card 1 -->
+        <div class="core-card reveal reveal-delay-1">
+          <div class="core-card-icon">🤖</div>
+          <h3>AI Customer Support</h3>
+          <p>An AI agent trained on your exact tone and playbook that deflects 60–70% of tickets automatically.</p>
+          <div class="mini-chat">
+            <div class="mini-chat-row">
+              <div class="mini-bubble ai">Where's my order?</div>
+            </div>
+            <div class="mini-chat-row">
+              <div class="mini-bubble user">Your order #4821 ships tomorrow at 2 PM. 📦 Track it here →</div>
+            </div>
+            <div class="mini-chat-row" style="margin-top:0.3rem;justify-content:flex-end;">
+              <span class="mini-tag"><span class="done-dot"></span> <span style="font-size:0.6rem;font-family:'JetBrains Mono',monospace;color:#16a34a;font-weight:600;">Resolved in 3s</span></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="core-card reveal reveal-delay-2">
+          <div class="core-card-icon">⚡</div>
+          <h3>Lead Qualification Engine</h3>
+          <p>Automated pipelines that score, tag, and route every inbound lead to the right action — instantly.</p>
+          <div class="mini-pipeline">
+            <div class="pipeline-step">
+              <span class="pipeline-icon">📥</span>
+              <span class="pipeline-label">New DM received</span>
+              <span class="pipeline-status done">Done</span>
+            </div>
+            <div class="pipeline-step">
+              <span class="pipeline-icon">🧠</span>
+              <span class="pipeline-label">AI scores intent</span>
+              <span class="pipeline-status done">Done</span>
+            </div>
+            <div class="pipeline-step">
+              <span class="pipeline-icon">📅</span>
+              <span class="pipeline-label">Book call automatically</span>
+              <span class="pipeline-status active">Active</span>
+            </div>
+            <div class="pipeline-step">
+              <span class="pipeline-icon">💬</span>
+              <span class="pipeline-label">Follow-up sequence</span>
+              <span class="pipeline-status queued">Queued</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="core-card reveal reveal-delay-3">
+          <div class="core-card-icon">📅</div>
+          <h3>Auto Booking System</h3>
+          <p>Your calendar fills itself. The AI qualifies, nurtures, and books the call — you just show up.</p>
+          <div class="mini-calendar">
+            <div class="cal-header">
+              <span>May 2025</span><span>↗ 16 booked</span>
+            </div>
+            <div class="cal-grid">
+              <div class="cal-cell">Su</div><div class="cal-cell">M</div><div class="cal-cell">T</div><div class="cal-cell">W</div><div class="cal-cell">Th</div><div class="cal-cell">F</div><div class="cal-cell">Sa</div>
+              <div class="cal-cell"></div><div class="cal-cell has-event">5</div><div class="cal-cell">6</div><div class="cal-cell has-event">7</div><div class="cal-cell">8</div><div class="cal-cell has-event">9</div><div class="cal-cell">10</div>
+              <div class="cal-cell">11</div><div class="cal-cell has-event">12</div><div class="cal-cell today">13</div><div class="cal-cell">14</div><div class="cal-cell has-event">15</div><div class="cal-cell">16</div><div class="cal-cell has-event">17</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── COMPARISON TABLE ─── -->
+  <section id="compare">
+    <div class="compare-inner">
+      <div class="section-badge reveal" style="margin-bottom:1.5rem;">📊 By the Numbers</div>
+      <h2 class="compare-heading reveal reveal-delay-1">
+        What changes when<br><span>Nodewave is installed.</span>
+      </h2>
+
+      <div class="compare-table reveal reveal-delay-2">
+        <div class="compare-header">
+          <div>Metric</div>
+          <div>Normal Backend</div>
+          <div>With Nodewave</div>
+          <div>Impact</div>
+        </div>
+        <div class="compare-row">
+          <div class="compare-metric">Monthly DMs / Leads</div>
+          <div class="compare-val">1,000</div>
+          <div class="compare-val better">1,000</div>
+          <div class="compare-impact"><span class="impact-pill same">Same Input</span></div>
+        </div>
+        <div class="compare-row">
+          <div class="compare-metric">Ticket Deflection Rate</div>
+          <div class="compare-val">8%</div>
+          <div class="compare-val better">78%</div>
+          <div class="compare-impact"><span class="impact-pill good">↑ Consistently Higher</span></div>
+        </div>
+        <div class="compare-row highlight">
+          <div class="compare-metric">Booking Rate</div>
+          <div class="compare-val">18%</div>
+          <div class="compare-val better">34%</div>
+          <div class="compare-impact"><span class="impact-pill core">⚡ Core Improvement</span></div>
+        </div>
+        <div class="compare-row">
+          <div class="compare-metric">Booked Calls</div>
+          <div class="compare-val">10</div>
+          <div class="compare-val better">45</div>
+          <div class="compare-impact"><span class="impact-pill good">Better Booking Rate</span></div>
+        </div>
+        <div class="compare-row">
+          <div class="compare-metric">Show-Up Rate</div>
+          <div class="compare-val">6</div>
+          <div class="compare-val better">35</div>
+          <div class="compare-impact"><span class="impact-pill good">Better Efficiency</span></div>
+        </div>
+        <div class="compare-row">
+          <div class="compare-metric">Hours Saved / Week</div>
+          <div class="compare-val">0</div>
+          <div class="compare-val better">40h</div>
+          <div class="compare-impact"><span class="impact-pill core">⚡ Core Improvement</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── SCALE CTA ─── -->
+  <section id="scale">
+    <div class="scale-card reveal">
+      <div class="scale-left">
+        <div class="section-badge" style="background:rgba(232,97,0,0.1);border-color:rgba(232,97,0,0.2);">🚀 Let's Scale</div>
+        <h2 class="scale-h2">
+          You already built<br>
+          something great.<br>
+          Now let's <em style="font-style:normal;color:var(--amber)">automate it.</em>
+        </h2>
+        <p class="scale-sub">
+          You get the team to install it.<br>
+          You get the tool to run it.<br>
+          You get the AI to make it bulletproof.
+        </p>
+        <a href="#contact" class="btn-primary mag">Book a Demo →</a>
+      </div>
+      <div class="scale-right">
+        <div class="scale-floating-card">
+          <div class="sfc-header">
+            <span class="sfc-title">CS Automation Pipeline</span>
+            <span class="sfc-badge running">● Running</span>
+          </div>
+          <div class="sfc-list">
+            <div class="sfc-item"><span>Tickets deflected today</span><span class="sfc-item-val">142</span></div>
+            <div class="sfc-item"><span>Avg response time</span><span class="sfc-item-val">3.2s</span></div>
+            <div class="sfc-item"><span>CSAT score</span><span class="sfc-item-val">97%</span></div>
+          </div>
+          <div class="sfc-bar"><div class="sfc-bar-fill" style="width:78%"></div></div>
+        </div>
+        <div class="scale-floating-card">
+          <div class="sfc-header">
+            <span class="sfc-title">Lead Qualification</span>
+            <span class="sfc-badge done">✓ Active</span>
+          </div>
+          <div class="sfc-list">
+            <div class="sfc-item"><span>Won</span><span class="sfc-item-val" style="color:var(--amber)">96</span></div>
+            <div class="sfc-item"><span>Call Booked</span><span class="sfc-item-val">84</span></div>
+            <div class="sfc-item"><span>Qualified</span><span class="sfc-item-val">51</span></div>
+            <div class="sfc-item"><span>New Lead</span><span class="sfc-item-val">49</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── PROCESS ─── -->
+  <section id="process">
+    <div class="process-inner">
+      <div class="process-header">
+        <div>
+          <div class="section-badge reveal">🔧 Process</div>
+          <h2 class="process-h2 reveal reveal-delay-1">Weeks,<br>not<br>months.</h2>
+        </div>
+        <p class="process-intro reveal reveal-delay-2">
+          We've built enough of these to move quickly. Our process is fixed, our timelines are honest, and your first working demo is always within two weeks. Setup in a week.
+        </p>
+      </div>
+
+      <div class="steps-grid">
+        <div class="step-card reveal" data-num="01">
+          <div class="step-num-chip">01</div>
+          <div class="step-title">Discovery &amp; Audit</div>
+          <p class="step-body">A structured 60-minute session to map your workflows, surface inefficiencies, and define what automation will actually change. No assumptions made before this call.</p>
+        </div>
+        <div class="step-card reveal reveal-delay-1" data-num="02">
+          <div class="step-num-chip">02</div>
+          <div class="step-title">Solution Architecture</div>
+          <p class="step-body">We document exactly what will be built, how it connects to your stack, and what data flows where. You approve before we write a single line of code.</p>
+        </div>
+        <div class="step-card reveal reveal-delay-2" data-num="03">
+          <div class="step-num-chip">03</div>
+          <div class="step-title">Build in Sprints</div>
+          <p class="step-body">Working demos in week two. Tight feedback loops. You see progress continuously — not at the end of a long silence.</p>
+        </div>
+        <div class="step-card reveal reveal-delay-3" data-num="04">
+          <div class="step-num-chip">04</div>
+          <div class="step-title">Deploy &amp; Handover</div>
+          <p class="step-body">We deploy to your environment, document everything, and train your team. You own what we build — completely and without dependency on us.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── TESTIMONIALS ─── -->
+  <section id="testimony">
+    <div class="testimony-inner">
+      <div class="testimony-top">
+        <div>
+          <div class="section-badge reveal">💬 Clients</div>
+          <h2 class="testimony-h2 reveal reveal-delay-1">What<br>clients<br>say.</h2>
+        </div>
+        <div class="testimony-stats reveal reveal-delay-2">
+          <div class="t-stat">
+            <div class="t-stat-num count-up" data-target="78">0</div><span>%</span>
+            <div class="t-stat-label">Avg. ticket deflection rate</div>
+          </div>
+          <div class="t-stat">
+            <div class="t-stat-num count-up" data-target="11">0</div><span>d</span>
+            <div class="t-stat-label">Fastest delivery time</div>
+          </div>
+          <div class="t-stat">
+            <div class="t-stat-num count-up" data-target="40">0</div><span>h</span>
+            <div class="t-stat-label">Hours saved per week</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="testimony-grid">
+        <div class="t-card reveal reveal-delay-1">
+          <div class="t-stars">★ ★ ★ ★ ★</div>
+          <p class="t-quote">"They really took the time to understand how our support actually works before building anything. The whole thing felt collaborative, not like we were just handed a generic system. What they built fits our workflow really well and has made things a lot easier for us. Would definitely recommend."</p>
+          <div class="t-author">
+            <div class="t-avatar">ST</div>
+            <div>
+              <div class="t-name">Steve</div>
+              <div class="t-company">North Notion Smokes</div>
+            </div>
+          </div>
+        </div>
+        <div class="t-card reveal reveal-delay-2">
+          <div class="t-stars">★ ★ ★ ★ ★</div>
+          <p class="t-quote">"We tried building this in-house for four months. Nodewave delivered something ten times better in three weeks — and it actually scales with our volume."</p>
+          <div class="t-author">
+            <div class="t-avatar">CR</div>
+            <div>
+              <div class="t-name">Community Response</div>
+              <div class="t-company">SaaS Platform</div>
+            </div>
+          </div>
+        </div>
+        <div class="t-card reveal reveal-delay-3">
+          <div class="t-stars">★ ★ ★ ★ ★</div>
+          <p class="t-quote">"Our CS reps have gone from handling 300+ tickets a day to roughly 10 each. The system they built fits naturally into how we already work. Super solid experience overall."</p>
+          <div class="t-author">
+            <div class="t-avatar">NS</div>
+            <div>
+              <div class="t-name">Steve</div>
+              <div class="t-company">Native Smokes 4 Less</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── PRICING ─── -->
+  <section id="pricing">
+    <div class="pricing-inner">
+      <div class="section-badge reveal">💰 Pricing</div>
+      <h2 class="pricing-h2 reveal reveal-delay-1">Fixed scope,<br>honest fees.</h2>
+      <p class="pricing-sub reveal reveal-delay-2">No retainers disguised as subscriptions. You know exactly what you're paying for.</p>
+
+      <div class="pricing-grid">
+        <div class="p-card reveal reveal-delay-1">
+          <div class="p-plan">Launchpad</div>
+          <div class="p-amount">₹49K</div>
+          <div class="p-period">Per project · One-time</div>
+          <div class="p-divider"></div>
+          <div class="p-feature"><span class="p-check">◈</span>One core automation flow</div>
+          <div class="p-feature"><span class="p-check">◈</span>Up to three integrations</div>
+          <div class="p-feature"><span class="p-check">◈</span>14-day delivery</div>
+          <div class="p-feature"><span class="p-check">◈</span>Full documentation &amp; handover</div>
+          <div class="p-cta"><a href="#contact" class="p-btn">Start here</a></div>
+        </div>
+
+        <div class="p-card featured reveal reveal-delay-2">
+          <div class="p-plan">Growth ✦</div>
+          <div class="p-amount" style="color:#fff;">₹1.2L</div>
+          <div class="p-period">Per project · Most popular</div>
+          <div class="p-divider"></div>
+          <div class="p-feature"><span class="p-check">◈</span>3–5 automation flows</div>
+          <div class="p-feature"><span class="p-check">◈</span>AI chatbot + lead qualification</div>
+          <div class="p-feature"><span class="p-check">◈</span>Unlimited integrations</div>
+          <div class="p-feature"><span class="p-check">◈</span>Priority support &amp; training</div>
+          <div class="p-cta"><a href="#contact" class="p-btn">Discuss this plan</a></div>
+        </div>
+
+        <div class="p-card reveal reveal-delay-3">
+          <div class="p-plan">Architect</div>
+          <div class="p-amount">Custom</div>
+          <div class="p-period">Scoped to your needs</div>
+          <div class="p-divider"></div>
+          <div class="p-feature"><span class="p-check">◈</span>End-to-end operations audit</div>
+          <div class="p-feature"><span class="p-check">◈</span>Custom AI model fine-tuning</div>
+          <div class="p-feature"><span class="p-check">◈</span>Engineer on retainer</div>
+          <div class="p-feature"><span class="p-check">◈</span>Dedicated Slack channel</div>
+          <div class="p-cta"><a href="#contact" class="p-btn">Let's scope it</a></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── CONTACT ─── -->
+  <section id="contact">
+    <div class="contact-inner">
+      <div class="contact-card reveal">
+        <div class="contact-left">
+          <div class="contact-badge">⚡ Start a Project</div>
+          <h2 class="contact-h2">Let's build<br>something<br>real.</h2>
+          <p class="contact-body">Tell us what you're working on. We'll respond within two hours with a quick diagnostic of where automation can make a measurable difference.</p>
+          <a href="mailto:hello@nodewave.in" class="contact-email">hello@nodewave.in</a>
+        </div>
+        <div class="contact-right">
+          <div class="gcal-box">
+            <div class="gcal-icon-row">
+              <div class="gcal-icon">📅</div>
+              <div>
+                <div class="gcal-title">Schedule a Call</div>
+                <div class="gcal-sub">Pick a slot · 30-min intro call</div>
+              </div>
+            </div>
+            <div class="gcal-divider"></div>
+            <p class="gcal-desc">Choose a time that works for you. We'll send a Google Meet link to your inbox immediately after booking.</p>
+            <a href="https://calendar.google.com/calendar/appointments/schedules/YOUR_SCHEDULE_ID" target="_blank" class="gcal-btn-cta">
+              📅 Book a Meeting
+            </a>
+            <div class="gcal-pills">
+              <span class="gcal-pill">Mon – Fri</span>
+              <span class="gcal-pill">10 AM – 6 PM IST</span>
+              <span class="gcal-pill active">30 min</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── FOOTER ─── -->
+  <footer>
+    <div class="footer-logo"><span class="nav-dot" style="width:6px;height:6px;"></span>Nodewave</div>
+    <div class="footer-links">
+      <a href="#core">Services</a>
+      <a href="#process">Process</a>
+      <a href="#testimony">Results</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#contact">Contact</a>
+    </div>
+    <div class="footer-copy">© 2025 Nodewave · Mumbai, India</div>
+  </footer>
+
+  <script>
+    /* ─── Lenis Smooth Scroll ─── */
+    const lenis = new Lenis({ duration: 1.2, easing: t => Math.min(1, 1.001 - Math.pow(2, -10 * t)), smoothWheel: true });
+    function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
+    requestAnimationFrame(raf);
+
+    /* ─── Cursor ─── */
+    const cd = document.getElementById('cd'), cr = document.getElementById('cr');
+    let mx=0,my=0,rx=0,ry=0;
+    document.addEventListener('mousemove', e => { mx=e.clientX; my=e.clientY; });
+    (function loop(){rx+=(mx-rx)*0.12;ry+=(my-ry)*0.12;cd.style.left=mx+'px';cd.style.top=my+'px';cr.style.left=rx+'px';cr.style.top=ry+'px';requestAnimationFrame(loop);})();
+
+    /* ─── Page Loader ─── */
+    const loader = document.getElementById('page-loader');
+    const lbf = document.getElementById('lbf');
+    let pct = 0;
+    const pctInt = setInterval(() => {
+      pct = Math.min(pct + Math.random() * 20, 95);
+      lbf.style.width = pct + '%';
+    }, 100);
+    window.addEventListener('load', () => {
+      clearInterval(pctInt);
+      lbf.style.width = '100%';
+      setTimeout(() => {
+        loader.style.transition = 'opacity 0.7s ease';
+        loader.style.opacity = '0';
+        setTimeout(() => loader.style.display = 'none', 700);
+      }, 1200);
+    });
+
+    /* ─── Nav scroll effect ─── */
+    const nav = document.getElementById('mainNav');
+    window.addEventListener('scroll', () => {
+      nav.classList.toggle('scrolled', window.scrollY > 80);
+    });
+
+    /* ─── Marquee build ─── */
+    const clients = [
+      {initials:'NN',name:'North Notion Smokes'},
+      {initials:'CR',name:'Community Response'},
+      {initials:'NS',name:'Native Smokes 4 Less'},
+      {initials:'EB',name:'Ecom Brand Co.'},
+      {initials:'AI',name:'AutomateIndia'},
+      {initials:'GF',name:'GrowthFounder'},
+      {initials:'SB',name:'ScaleBase HQ'},
+      {initials:'DX',name:'DX Digital Agency'},
+    ];
+    function buildMarquee(id) {
+      const el = document.getElementById(id);
+      // Double for seamless loop
+      [...clients,...clients].forEach(c => {
+        const div = document.createElement('div');
+        div.className = 'marquee-item';
+        div.innerHTML = `<div class="marquee-avatar">${c.initials}</div><span class="marquee-name">${c.name}</span><span class="marquee-check">✦</span>`;
+        el.appendChild(div);
+      });
+    }
+    buildMarquee('m1'); buildMarquee('m2');
+
+    /* ─── Scroll Reveal ─── */
+    const revealObs = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in-view'); revealObs.unobserve(e.target); } });
+    }, { threshold: 0.12 });
+    document.querySelectorAll('.reveal').forEach(el => revealObs.observe(el));
+
+    /* ─── Counter animation ─── */
+    function animateCounter(el) {
+      const target = parseInt(el.dataset.target);
+      const dur = 1800;
+      const start = performance.now();
+      function step(now) {
+        const t = Math.min((now - start) / dur, 1);
+        const ease = 1 - Math.pow(1-t, 3);
+        el.textContent = Math.round(ease * target);
+        if (t < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+    const counterObs = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting) { animateCounter(e.target); counterObs.unobserve(e.target); } });
+    }, { threshold: 0.5 });
+    document.querySelectorAll('.count-up').forEach(el => counterObs.observe(el));
+
+    /* ─── Magnetic buttons ─── */
+    document.querySelectorAll('.mag').forEach(btn => {
+      btn.addEventListener('mousemove', function(e) {
+        const r = this.getBoundingClientRect();
+        const x = e.clientX - r.left - r.width/2;
+        const y = e.clientY - r.top - r.height/2;
+        this.style.transform = `translate(${x*0.18}px, ${y*0.18}px)`;
+      });
+      btn.addEventListener('mouseleave', function() {
+        this.style.transform = '';
+        this.style.transition = 'transform 0.6s cubic-bezier(0.175,0.885,0.32,1.275)';
+        setTimeout(() => this.style.transition = '', 600);
+      });
+    });
+
+    /* ─── Progress bars animate when visible ─── */
+    const barObs = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.querySelectorAll('.float-card-fill,.sfc-bar-fill').forEach(bar => {
+            const w = bar.style.width;
+            bar.style.width = '0';
+            setTimeout(() => { bar.style.transition = 'width 1.2s ease'; bar.style.width = w; }, 100);
+          });
+          barObs.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.3 });
+    document.querySelectorAll('.float-card, .scale-floating-card').forEach(el => barObs.observe(el));
+
+    /* ─── Hero float cards scroll parallax ─── */
+    window.addEventListener('scroll', () => {
+      const y = window.scrollY;
+      const fl = document.querySelector('.hero-float-left');
+      const fr = document.querySelector('.hero-float-right');
+      if (fl) fl.style.transform = `translateY(calc(-30% + ${y*0.12}px)) rotate(-4deg)`;
+      if (fr) fr.style.transform = `translateY(calc(-60% + ${y*0.18}px)) rotate(4deg)`;
+    });
+  </script>
+</body>
+</html>
